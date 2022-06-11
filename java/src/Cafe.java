@@ -17,12 +17,14 @@ import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.io.File;
 import java.io.FileReader;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.List;
 import java.util.ArrayList;
+
 
 /**
  * This class defines a simple embedded SQL utility class that is designed to
@@ -276,7 +278,7 @@ public class Cafe {
                    case 1: Menu(esql, authorisedUser); break;
                    case 2: UpdateProfile(esql, authorisedUser); break;
                    case 3: PlaceOrder(esql); break;
-                   case 4: UpdateOrder(esql); break;
+                   case 4: UpdateOrder(esql, authorisedUser); break;
                    case 9: usermenu = false; break;
                    default : System.out.println("Unrecognized choice!"); break;
                 }
@@ -656,9 +658,143 @@ public class Cafe {
 
    }
 
-  public static void PlaceOrder(Cafe esql){}
+   public static void PlaceOrder(Cafe esql){
+     try{
+	String query = String.format("SELECT * FROM Orders O");
+	int row = esql.executeQuery(query);
+	System.out.println("Enter the customer login:");
+	String login1 = in.readLine();
+	String query1 = String.format("SELECT * FROM Users U WHERE U.login = '%s'",login1);
+	int row1 = esql.executeQuery(query1);
+	if (row1 == 0) {
+	   System.out.println("Non existent login!\n");
+	   return;
+	}
+	System.out.println("Browse order history of user? (Last 5 purchases)");
+	System.out.println("1:Yes");
+	System.out.println("2:No");
+	switch(readChoice()) {
+	   case 1: String qq = String.format("SELECT * FROM Orders WHERE login = '%s' ORDER BY timeStampRecieved LIMIT 5", login1);
+		   int Hist = esql.executeQueryAndPrintResult(qq);
+		   System.out.println("Abort Order?(1:Yes)");
+		   switch(readChoice()) {
+			case 1:return;
+			default:break;
+		   }
+		   break;
+	   case 2: break;
+	   default: break;
+	}
+	System.out.println("Enter pay status(1 for paid, 0 for unpaid)");
+	boolean paid = false;
+	switch (readChoice()) {
+	   case 0: paid = false;
+		   break;
+	   case 1: paid = true;
+		   break;
+	   default: System.out.println("Invalid input!");
+		   break;
+	}
+	Timestamp ts = new Timestamp(System.currentTimeMillis());
+	System.out.println("Enter total");
+	String price = in.readLine();
+	String inp = String.format("INSERT INTO Orders (orderid, login, paid, timeStampRecieved, total) VALUES (%d,'%s','%s','%s',%s)", row + 1, login1, paid, ts, price);
+	esql.executeUpdate(inp);
+	System.out.println("Order inputted\n\n");
+     }catch(Exception e){
+	System.err.println(e.getMessage());
+     }
+  }
 
-  public static void UpdateOrder(Cafe esql){}
+  public static void UpdateOrder(Cafe esql, String user){
+     try{
+	String userType = null;
+	String q = String.format("SELECT type FROM Users WHERE login = '%s'", user);
+	List<List<String>> result = esql.executeQueryAndReturnResult(q);
+	userType = result.get(0).get(0);
+	if(!userType.equals("Customer")){
+	   System.out.println("Output all unpaid orders from <= 24 hours?");
+	   System.out.println("1:Yes");
+	   switch(readChoice()) {
+		case 1: orderHist(esql);
+			break;
+		default:break;
+	   }
+	}
+	System.out.println("Input the order ID to update");
+	String order = in.readLine();
+	int id = Integer.parseInt(order);
+	String findOrder = String.format("SELECT * FROM Orders O");
+	int row = esql.executeQuery(findOrder);
+	if (id > row || id < 1) {
+	   System.out.println("Invalid order ID!\n\n");
+	   return;
+	}
+	if (userType.equals("Customer")) {
+	   updatePaidCustomer(esql, order);
+	}
+	else {
+	   
+	   updatePaid(esql, order);
+	}
+     }catch(Exception e){
+	System.err.println(e.getMessage());
+     }
+  }
+
+ public static void updatePaidCustomer(Cafe esql, String id) {
+    try{
+	String q = String.format("SELECT O.paid FROM Orders O WHERE O.orderid = '%s'",id);
+	List<List<String>> p = esql.executeQueryAndReturnResult(q);
+	char c = p.get(0).get(0).charAt(0);
+	if (c == 't') {
+	   System.out.println("Cannot modify this order!");
+	   return;
+	}
+	System.out.println("Modify Paid? (1 if yes)");
+	switch(readChoice()) {
+	   case 1: String query = String.format("UPDATE Orders SET paid = 'true' WHERE orderid = %s", id);
+		   esql.executeUpdate(query);
+		   System.out.printf("Order %s has been updated to be paid\n\n", id);
+		   break;
+	   default: break;
+	}
+    }catch(Exception e) {
+	System.err.println(e.getMessage());
+    }
+ }
+
+ public static void updatePaid(Cafe esql, String id) {
+    try{
+	System.out.println("Please input 1 for paid or 2 for unpaid");
+	switch(readChoice()) {
+	   case 1: String query = String.format("UPDATE Orders SET paid = 'true' WHERE orderid = %s", id);
+		   esql.executeUpdate(query);
+		   System.out.printf("Order %s has been updated to be paid\n\n", id);
+		   break;
+	   case 2: String query1 = String.format("UPDATE Orders SET paid = 'false' WHERE orderid = %s", id);
+		   esql.executeUpdate(query1);
+		   System.out.printf("Order %s has been updated to be unpaid\n\n", id);
+		   break;
+	   default: System.out.println("Invalid option\n\n");
+		   break;
+	}
+   }catch(Exception e){
+	System.err.println(e.getMessage());
+   }
+ }
+
+ public static void orderHist(Cafe esql) {
+    try{
+	Timestamp ts = new Timestamp(System.currentTimeMillis());
+	String query = String.format("SELECT * FROM Orders WHERE timeStampRecieved >= NOW() - '1 day'::INTERVAL");
+	int rows = esql.executeQueryAndPrintResult(query);
+    }catch(Exception e) {
+	System.err.println(e.getMessage());
+    }
+ }
+
+
 
 }//end Cafe
 

@@ -246,21 +246,18 @@ public class Cafe {
          String dbport = args[1];
          String user = args[2];
          esql = new Cafe (dbname, dbport, user, "");
-
-         boolean keepon = true;
+	 boolean keepon = true;
          while(keepon) {
             // These are sample SQL statements
             System.out.println("MAIN MENU");
             System.out.println("---------");
             System.out.println("1. Create user");
             System.out.println("2. Log in");
-            System.out.println("3. Bypass login (for lazy developers!");
             System.out.println("9. < EXIT");
             String authorisedUser = null;
             switch (readChoice()){
                case 1: CreateUser(esql); break;
                case 2: authorisedUser = LogIn(esql); break;
-               case 3: authorisedUser = "admin"; break;
                case 9: keepon = false; break;
                default : System.out.println("Unrecognized choice!"); break;
             }//end switch
@@ -277,7 +274,7 @@ public class Cafe {
                 System.out.println("9. Log out");
                 switch (readChoice()){
                    case 1: Menu(esql, authorisedUser); break;
-                   case 2: UpdateProfile(esql); break;
+                   case 2: UpdateProfile(esql, authorisedUser); break;
                    case 3: PlaceOrder(esql); break;
                    case 4: UpdateOrder(esql); break;
                    case 9: usermenu = false; break;
@@ -307,9 +304,9 @@ public class Cafe {
          "\n\n*******************************************************\n" +
          "              User Interface      	               \n" +
          "*******************************************************\n");
-   }//end Greeting
+}//end Greeting
 
-   /*
+    /*
     * Reads the users choice given from the keyboard
     * @int
     **/
@@ -344,7 +341,7 @@ public class Cafe {
 	    String type="Customer";
 	    String favItems="";
 
-				 String query = String.format("INSERT INTO USERS (phoneNum, login, password, favItems, type) VALUES ('%s','%s','%s','%s','%s')", phone, login, password, favItems, type);
+	 String query = String.format("INSERT INTO USERS (phoneNum, login, password, favItems, type) VALUES ('%s','%s','%s','%s','%s')", phone, login, password, favItems, type);
 
          esql.executeUpdate(query);
          System.out.println ("User successfully created!");
@@ -388,8 +385,8 @@ public class Cafe {
  	  String query = String.format("SELECT type FROM Users WHERE login='%s'", user);
  	  List<List<String>> result = esql.executeQueryAndReturnResult(query);
  	  userType = result.get(0).get(0);
-
-          boolean keepon = true;
+          userType = userType.replaceAll("\\s+",""); 
+	  boolean keepon = true;
 	  while(keepon){
 	     //Check what the user wants to do next
 	     if(userType.equals("Customer")){
@@ -493,13 +490,66 @@ public class Cafe {
          System.out.println("3. Modify item");
          System.out.println("9. Go to main menu");
          switch (readChoice()){
-            case 1: 
-            case 2: System.out.println("\tItem to remove: ");
+            case 1: System.out.print("Name: ");
+		    String itemName1 = in.readLine();
+  		    System.out.print("\nType: ");
+		    String type1 = in.readLine();
+		    System.out.print("\nPrice: ");
+		    String price1 = in.readLine();
+   		    System.out.print("\nDescription: ");
+		    String description1 = in.readLine();
+		    System.out.print("\nimageURL: ");
+                    String imageUrl1 = in.readLine();
+		    String query1 = String.format("INSERT INTO Menu VALUES ('%s', '%s', %s, '%s', '%s')", itemName1, type1, price1, description1, imageUrl1);
+		    esql.executeUpdate(query1);
+		    break;
+	   case 2: System.out.print("\tItem to remove: ");
                     String itemName = in.readLine();
-                    String query = String.format("DELETE FROM Menu WHERE itemName='%s'", itemName);
-                    esql.executeUpdate(query);
+                    String query2 = String.format("DELETE FROM Menu WHERE itemName='%s'", itemName);
+                    esql.executeUpdate(query2);
                     break;
-            case 3: Menu_SearchItemType(esql); break;
+            case 3: System.out.print("Item to modify: ");
+		    String itemName3 = in.readLine();
+		    System.out.println("What to modify?");
+		    System.out.println("1. Name");
+	            System.out.println("2. Type");
+         	    System.out.println("3. Price");
+        	    System.out.println("4. Description");
+   		    System.out.println("5. imageURL");
+		    String query3;
+		    switch (readChoice()){
+			case 1: System.out.print("Name: ");
+				String itemNameNew = in.readLine();
+				query3 = String.format("UPDATE Menu SET itemName = '%s' WHERE itemName = '%s'", itemNameNew, itemName3);
+				esql.executeUpdate(query3);
+				break;
+ 			case 2: System.out.print("Type: ");
+                                String typeNew = in.readLine();
+                                query3 = String.format("UPDATE Menu SET type = '%s' WHERE itemName = '%s'", typeNew, itemName3);
+                                esql.executeUpdate(query3);
+                                break;
+
+			case 3: System.out.print("Price: ");
+                                String priceNew = in.readLine();
+                                query3 = String.format("UPDATE Menu SET price = %s WHERE itemName = '%s'", priceNew, itemName3);
+                                esql.executeUpdate(query3);
+                                break;
+
+			case 4: System.out.print("Description: ");
+                                String descriptionNew = in.readLine();
+                                query3 = String.format("UPDATE Menu SET description = '%s' WHERE itemName = '%s'", descriptionNew, itemName3);
+                                esql.executeUpdate(query3);
+                                break;
+
+			case 5: System.out.print("ImageURL: ");
+                                String imageURLNew = in.readLine();
+                                query3 = String.format("UPDATE Menu SET ImageURL = '%s' WHERE itemName = '%s'", imageURLNew, itemName3);
+                                esql.executeUpdate(query3);
+                                break;
+
+		    }
+			
+		     break;
             case 9: System.out.println("\n"); return;
             default : System.out.println("Unrecognized choice!"); break;
          }
@@ -508,8 +558,98 @@ public class Cafe {
          System.err.println (e.getMessage ());
       }
    }  
-   public static void UpdateProfile(Cafe esql){
+   public static void UpdateProfile(Cafe esql, String user){
       try{
+	  //check user type
+	  String userType = null;
+          String query = String.format("SELECT type FROM Users WHERE login='%s'", user);
+          List<List<String>> result = esql.executeQueryAndReturnResult(query);
+          userType = result.get(0).get(0);
+          userType = userType.replaceAll("\\s+","");
+	  
+	  if(userType.equals("Manager")){ 
+	      System.out.print("User to modify: ");
+              user = in.readLine();
+              System.out.println("What to modify?");
+                    System.out.println("1. Login");
+                    System.out.println("2. Phone Number");
+                    System.out.println("3. Password");
+                    System.out.println("4. Favorite Items");
+                    System.out.println("5. type");
+                    switch (readChoice()){
+                        case 1: System.out.print("Login: ");
+                                String loginNew = in.readLine();
+                                query = String.format("UPDATE Users SET login = '%s' WHERE login = '%s'", loginNew, user);
+                                esql.executeUpdate(query);
+                                break;
+                        case 2: System.out.print("phoneNum: ");
+                                String phoneNumNew = in.readLine();
+                                query = String.format("UPDATE Users SET phoneNum = '%s' WHERE login = '%s'", phoneNumNew, user);
+                                esql.executeUpdate(query);
+                                break;
+
+                        case 3: System.out.print("Password: ");
+                                String passNew = in.readLine();
+                                query = String.format("UPDATE Users SET password = '%s' WHERE login = '%s'", passNew, user);
+                                esql.executeUpdate(query);
+                                break;
+
+                        case 4: System.out.print("FavItems: ");
+                                String fINew = in.readLine();
+                                query = String.format("UPDATE Users SET favItems = '%s' WHERE login = '%s'", fINew, user);
+                                esql.executeUpdate(query);
+                                break;
+
+                        case 5: System.out.print("Type: ");
+                                String typeNew = in.readLine();
+                                query = String.format("UPDATE Users SET type = '%s' WHERE login = '%s'", typeNew, user);
+                                esql.executeUpdate(query);
+                                break;
+
+                    }
+	}
+        else{
+		    System.out.println("What to modify?");
+                    System.out.println("1. Login");
+                    System.out.println("2. Phone Number");
+                    System.out.println("3. Password");
+                    System.out.println("4. Favorite Items");
+                    System.out.println("5. type");
+                    switch (readChoice()){
+                        case 1: System.out.print("Login: ");
+                                String loginNew = in.readLine();
+                                query = String.format("UPDATE Users SET login = '%s' WHERE login = '%s'", loginNew, user);
+                                esql.executeUpdate(query);
+                                break;
+                        case 2: System.out.print("phoneNum: ");
+                                String phoneNumNew = in.readLine();
+                                query = String.format("UPDATE Users SET phoneNum = '%s' WHERE login = '%s'", phoneNumNew, user);
+                                esql.executeUpdate(query);
+                                break;
+
+                        case 3: System.out.print("Password: ");
+                                String passNew = in.readLine();
+                                query = String.format("UPDATE Users SET password = '%s' WHERE login = '%s'", passNew, user);
+                                esql.executeUpdate(query);
+                                break;
+
+                        case 4: System.out.print("FavItems: ");
+                                String fINew = in.readLine();
+                                query = String.format("UPDATE Users SET favItems = '%s' WHERE login = '%s'", fINew, user);
+                                esql.executeUpdate(query);
+                                break;
+
+                        case 5: System.out.print("Type: ");
+                                String typeNew = in.readLine();
+                                query = String.format("UPDATE Users SET type = '%s' WHERE login = '%s'", typeNew, user);
+                                esql.executeUpdate(query);
+                                break;
+
+                    }
+
+
+	}
+
       }catch(Exception e){
          System.err.println (e.getMessage ());
       }

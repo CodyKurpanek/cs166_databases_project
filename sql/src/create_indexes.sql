@@ -5,3 +5,11 @@ ON orders
 CREATE INDEX index2
 ON ItemStatus
 ( orderid );
+
+CREATE INDEX menuItemType
+ON Menu
+(type);
+
+CREATE INDEX menuItemName
+ON Menu
+(itemName);
